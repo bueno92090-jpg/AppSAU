@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Triagem de Saúde</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #eef2f7;
+  text-align: center;
+}
+
+.container {
+  background: white;
+  padding: 20px;
+  margin: 30px;
+  border-radius: 10px;
+}
+
+input, select {
+  width: 90%;
+  padding: 8px;
+  margin: 5px;
+}
+
+button {
+  padding: 10px;
+  width: 95%;
+  background: #2c7be5;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+#resultado {
+  margin-top: 10px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+#explicacao {
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h3>🩺 Triagem de Saúde</h3>
+
+<input id="idade" placeholder="Idade" type="number">
+<input id="peso" placeholder="Peso (kg)" type="number">
+<input id="altura" placeholder="Altura (m)" type="number">
+<input id="pressao" placeholder="Pressão" type="number">
+
+<select id="atividade">
+<option value="">Atividade</option>
+<option value="1">0 dias</option>
+<option value="2">1-2 dias</option>
+<option value="3">3-4 dias</option>
+<option value="4">5+ dias</option>
+</select>
+
+<select id="alimentacao">
+<option value="">Alimentação</option>
+<option value="1">Muito ruim</option>
+<option value="2">Ruim</option>
+<option value="3">Regular</option>
+<option value="4">Boa</option>
+<option value="5">Muito boa</option>
+</select>
+
+<select id="fumo">
+<option value="">Fuma?</option>
+<option value="0">Não</option>
+<option value="1">Sim</option>
+</select>
+
+<select id="hist">
+<option value="">Histórico</option>
+<option value="0">Não</option>
+<option value="1">Sim</option>
+</select>
+
+<button id="btn">Classificar</button>
+
+<div id="resultado"></div>
+<div id="explicacao"></div>
+
+</div>
+
+<script>
+
+// ================= BASE =================
+var X = [
+  [45,27,130,2,3,0,1],
+  [30,22,120,4,4,0,0],
+  [60,30,150,1,2,1,1],
+  [25,20,110,5,5,0,0],
+  [50,28,140,2,3,1,1],
+  [35,24,125,3,4,0,0]
+];
+
+var Y = [1,0,2,0,2,1];
+
+// ================= NORMALIZAÇÃO =================
+function normalizar(dados){
+  var cols = dados[0].length;
+  var mins = [];
+  var maxs = [];
+
+  for(var i=0;i<cols;i++){
+    mins[i] = Infinity;
+    maxs[i] = -Infinity;
+  }
+
+  for(var i=0;i<dados.length;i++){
+    for(var j=0;j<cols;j++){
+      if(dados[i][j] < mins[j]) mins[j] = dados[i][j];
+      if(dados[i][j] > maxs[j]) maxs[j] = dados[i][j];
+    }
+  }
+
+  var norm = [];
+
+  for(var i=0;i<dados.length;i++){
+    var linha = [];
+    for(var j=0;j<cols;j++){
+      var val = (dados[i][j] - mins[j]) / (maxs[j] - mins[j] || 1);
+      linha.push(val);
+    }
+    norm.push(linha);
+  }
+
+  return norm;
+}
+
+// ================= DISTÂNCIA =================
+function distancia(a, b){
+  var soma = 0;
+  for(var i=0;i<a.length;i++){
+    soma += Math.pow(a[i] - b[i], 2);
+  }
+  return Math.sqrt(soma);
+}
+
+// ================= KNN =================
+function classificar(){
+
+  var idade = Number(document.getElementById("idade").value);
+  var peso = Number(document.getElementById("peso").value);
+  var altura = Number(document.getElementById("altura").value);
+  var pressao = Number(document.getElementById("pressao").value);
+  var atividade = document.getElementById("atividade").value;
+  var alimentacao = document.getElementById("alimentacao").value;
+  var fumo = document.getElementById("fumo").value;
+  var hist = document.getElementById("hist").value;
+
+  if(
+    !idade || !peso || !altura || !pressao ||
+    atividade==="" || alimentacao==="" ||
+    fumo==="" || hist===""
+  ){
+    alert("Preencha todos os campos");
+    return;
+  }
+
+  fumo = Number(fumo);
+  hist = Number(hist);
+
+  var imc = peso / (altura * altura);
+
+  var novo = [idade, imc, pressao, Number(atividade), Number(alimentacao), fumo, hist];
+
+  var dados = X.slice();
+  dados.push(novo);
+
+  var norm = normalizar(dados);
+
+  var novo_n = norm[norm.length - 1];
+  norm.pop();
+
+  var dist = [];
+
+  for(var i=0;i<norm.length;i++){
+    dist.push({
+      d: distancia(novo_n, norm[i]),
+      c: Y[i]
+    });
+  }
+
+  dist.sort(function(a,b){ return a.d - b.d; });
+
+  var votos = [0,0,0];
+
+  for(var i=0;i<3;i++){
+    votos[dist[i].c]++;
+  }
+
+  var classe = 0;
+  if(votos[1] > votos[classe]) classe = 1;
+  if(votos[2] > votos[classe]) classe = 2;
+
+  var textos = ["Baixo risco","Médio risco","Alto risco"];
+  var cores = ["green","orange","red"];
+
+  document.getElementById("resultado").innerHTML =
+    textos[classe] + " | IMC: " + imc.toFixed(1);
+
+  document.getElementById("resultado").style.color = cores[classe];
+
+  document.getElementById("explicacao").innerHTML =
+    "Resultado baseado em perfis semelhantes (KNN).";
+}
+
+// ================= EVENTO (CRÍTICO) =================
+document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById("btn").onclick = classificar;
+});
+
+</script>
+
+</body>
+</html>
