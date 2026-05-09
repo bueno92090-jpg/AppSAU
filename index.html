@@ -18,6 +18,26 @@ body {
   border-radius: 10px;
 }
 
+.label {
+  display: block;
+  text-align: left;
+  font-size: 13px;
+  margin-bottom: 3px;
+  color: #333;
+}
+
+.ajuda {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #999;
+  font-style: italic;
+}
+
+.campo {
+  margin-bottom: 12px;
+}
+
 input, select {
   width: 90%;
   padding: 8px;
@@ -53,8 +73,22 @@ button {
 
 <input id="idade" placeholder="Idade" type="number">
 <input id="peso" placeholder="Peso (kg)" type="number">
-<input id="altura" placeholder="Altura (m)" type="number">
-<input id="pressao" placeholder="Pressão" type="number">
+  <div>
+   <input id="altura" placeholder="Altura (m)" type="number">
+
+   <small class="ajuda">
+    💡 Exemplo: Exemplo: 1,75
+   </small>
+  </div>
+
+  <div>
+   <input id="pressao" placeholder="Pressão arterial máxima (Sistólica)" type="number">
+
+   <small class="ajuda">
+    💡 Exemplo: Exemplo: use 120 em uma pressão 120/80 (ou 12/8).
+   </small>
+  </div>
+
 
 <select id="atividade">
 <option value="">Atividade</option>
@@ -74,16 +108,24 @@ button {
 </select>
 
 <select id="fumo">
-<option value="">Fuma?</option>
+<option value="">Você fuma?</option>
 <option value="0">Não</option>
 <option value="1">Sim</option>
 </select>
 
-<select id="hist">
-<option value="">Histórico</option>
-<option value="0">Não</option>
-<option value="1">Sim</option>
-</select>
+ <div class="campo">
+
+   <select id="hist">
+     <option value="">Histórico familiar de doenças?</option>
+     <option value="0">Não</option>
+     <option value="1">Sim</option>
+   </select>
+
+   <small class="ajuda">
+     💡 Inclui hipertensão, diabetes, doenças cardiovasculares, obesidade e AVC.
+   </small>
+
+ </div>
 
 <button id="btn">Classificar</button>
 
@@ -213,7 +255,8 @@ function classificar(){
   document.getElementById("resultado").style.color = cores[classe];
 
   document.getElementById("explicacao").innerHTML =
-    "Resultado baseado em perfis semelhantes (KNN).";
+  "Esta análise utiliza Inteligência Artificial (Machine Learning), com base em perfis semelhantes.<br>" +
+  "Para uma avaliação completa, procure um profissional de saúde.";
 }
 
 // ================= EVENTO (CRÍTICO) =================
