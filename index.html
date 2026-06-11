@@ -91,7 +91,7 @@ button {
 
 
 <select id="atividade">
-<option value="">Atividade</option>
+<option value="">Atividade Física</option>
 <option value="1">0 dias</option>
 <option value="2">1-2 dias</option>
 <option value="3">3-4 dias</option>
@@ -108,7 +108,7 @@ button {
 </select>
 
 <select id="fumo">
-<option value="">Você fuma?</option>
+<option value="">Você Fuma?</option>
 <option value="0">Não</option>
 <option value="1">Sim</option>
 </select>
@@ -136,19 +136,156 @@ button {
 
 <script>
 
-// ================= BASE =================
-var X = [
-  [45,27,130,2,3,0,1],
-  [30,22,120,4,4,0,0],
-  [60,30,150,1,2,1,1],
-  [25,20,110,5,5,0,0],
-  [50,28,140,2,3,1,1],
-  [35,24,125,3,4,0,0]
+/*
+Projeto: App SAU
+Responsável: Prof. Jeferson Rafael Bueno & Profa. Rovana Kinas
+
+	Explicação sobre o KNN:
+O sistema procura, dentro de sua base de dados, as três pessoas mais parecidas com o usuário (K = 3). Essa comparação é realizada por meio da distância euclidiana, calculada a partir dos dados normalizados, permitindo medir o grau de semelhança entre os perfis.
+
+Em seguida, o algoritmo seleciona os três perfis mais próximos (NN – Nearest Neighbors, ou "vizinhos mais próximos") e verifica a classificação atribuída a cada um deles (baixo, médio ou alto risco).
+
+A classificação final do usuário é determinada por votação majoritária. Por exemplo, se dois dos três vizinhos mais próximos forem classificados como médio risco, o usuário também será classificado como médio risco.
+
+De forma simples, o algoritmo responde à seguinte pergunta:
+
+"Entre as pessoas mais parecidas com você, qual foi o resultado mais comum?"
+
+Ou seja, 
+
+O que é K?
+→ São os 3 vizinhos mais próximos.
+
+O que é NN?
+→ São os perfis mais semelhantes encontrados na base.
+
+Como essa semelhança é medida?
+→ Pela distância euclidiana.
+
+Por que normalizar os dados?
+→ Para que idade, IMC, pressão, atividade física etc. contribuam de forma equilibrada.
+
+Como sai a classificação final?
+→ Por votação majoritária.
+
+No código, a sequência é a seguinte:
+
+Coleta dos dados
+        ↓
+Cálculo do IMC
+        ↓
+Normalização Min-Max
+        ↓
+Cálculo da Distância Euclidiana
+        ↓
+Identificação dos K vizinhos mais próximos (com base na distância calculada)
+        ↓
+Votação majoritária
+        ↓
+Classificação do risco
+
+Importante: 
+A distância não é calculada apenas com os dados do usuário. O algoritmo compara o perfil do usuário com cada perfil existente na base de referência. Para cada comparação é calculada uma Distância Euclidiana. Quanto menor essa distância, maior a semelhança entre os perfis. Os perfis mais próximos são então utilizados pelo algoritmo KNN para determinar a classificação final do usuário.
+
+*/
+
+// ================= BASE de DADOS =================
+
+/* base de dados de treinamento/referência utilizada pelo algoritmo KNN
+ Explicação: var X é uma matriz que contém os dados de cada pessoa, 
+             ou seja, cada linha são os dados de um indivíduo.
+ Os dados estão na ordem:
+ [Idade, IMC, Pressão, Ativ. Física, Alimentação, Fumante, H. Fam]
+
+Como cada resposta é "transformada" em número:
+- Atividade Física: 1 a 4
+- Alimentação: 1 a 5
+- Fumante: 0 ou 1 (Não é 0 e Sim é 1)
+- Histórico: 0 ou 1 (Não é 0 e Sim é 1)
+*/
+
+[45, 27, 130, 2, 3, 0, 1], // Perfil 0
+  [30, 22, 120, 4, 4, 0, 0], // Perfil 1
+  [60, 30, 150, 1, 2, 1, 1], // Perfil 2
+  [25, 20, 110, 5, 5, 0, 0], // Perfil 3
+  [50, 28, 140, 2, 3, 1, 1], // Perfil 4
+  [35, 24, 125, 3, 4, 0, 0], // Perfil 5
+
+  // --- PERFIS ADICIONADOS na versão V2 ---
+  // Casos de Baixo Risco (Adolescentes ativos, adultos eutróficos saudáveis)
+  [19, 21, 115, 4, 4, 0, 0], // Perfil 6: Jovem universitário, musculação ativa, ótima pressão.
+  [40, 23, 118, 3, 5, 0, 0], // Perfil 7: Adulto saudável, dieta balanceada exemplar, sem fatores de risco.
+  [28, 19, 110, 5, 4, 0, 1], // Perfil 8: Atleta amadora. Histórico familiar isolado não eleva risco pelo estilo de vida.
+  [33, 24, 120, 3, 3, 0, 0], // Perfil 9: Perfil padrão regular/saudável na média da população.
+
+  // Casos de Médio Risco (Fronteiras de sobrepeso, pré-hipertensão ou estresse)
+  [26, 26, 132, 2, 2, 0, 0], // Perfil 10: Jovem com sobrepeso leve e início de oscilação pressórica por sedentarismo.
+  [48, 24, 135, 2, 3, 0, 1], // Perfil 11: Meia-idade, peso ótimo, mas pressão limítrofe e histórico familiar positivo.
+  [52, 29, 128, 3, 3, 0, 0], // Perfil 12: Adulto maduro quase na faixa de obesidade, controlando com atividade moderada.
+  [22, 22, 122, 1, 2, 1, 0], // Perfil 13: Jovem magro, porém fumante ativo e sedentário total.
+
+  // Casos de Alto Risco (Síndromes metabólicas, idosos fragilizados ou múltiplos abusos)
+  [65, 32, 145, 1, 2, 0, 1], // Perfil 14: Idoso hipertenso, obeso grau I, histórico familiar pesado.
+  [38, 35, 138, 1, 1, 1, 1], // Perfil 15: Jovem com obesidade severa, fumante crônico e péssima alimentação.
+  [42, 26, 160, 2, 3, 0, 1], // Perfil 16: Hipertensão grave estagiada (160), mesmo sem obesidade, exige alto risco.
+  [58, 31, 142, 1, 2, 1, 0]  // Perfil 17: Adulto maduro, obeso, fumante e hipertenso mapeado pela diretriz.
 ];
 
-var Y = [1,0,2,0,2,1];
+/* VETOR com a classificação de RISCO 
+        Este vetor classifica cada pessoa como:
+                           0 = Baixo risco
+                           1 = Médio risco
+                           2 = Alto risco
+Este é o VETOR Y de classificação correspondente indexado à matriz X:
+*/
+
+var Y = [
+  1, 0, 2, 0, 2, 1, // Classes originais (0 a 5)
+  0, 0, 0, 0,       // Classes novas - Baixo Risco (6 a 9)
+  1, 1, 1, 1,       // Classes novas - Médio Risco (10 a 13)
+  2, 2, 2, 2        // Classes novas - Alto Risco (14 a 17)
+];
+
+/* "A classificação utiliza fatores de risco reconhecidos pela literatura científica e por diretrizes nacionais e internacionais de saúde." Ou seja, é uma base sintética.
+*/ 
+/*
+BASE DE REFERÊNCIA
+
+Os perfis são sintéticos e foram construídos com finalidade educacional
+e demonstrativa.
+
+As classificações foram atribuídas com base em fatores de risco reconhecidos na literatura para doenças metabólicas e cardiovasculares.
+
+Esta base não substitui validação clínica.
+*/
 
 // ================= NORMALIZAÇÃO =================
+/*
+	É usada a normalização Min-Max, que é uma técnica muito utilizada em Machine Learning para colocar todas as variáveis na mesma escala. Pois, temos pressão com 120 e Histórico com valor 0 ou 1 (exemplo), ou seja, temos variáveis com unidades muito diferentes.
+	Se não normalizarmos os dados, a variável Pressão teria muito mais influência no cálculo da distância do que Fumante, por exemplo.
+
+Fórmula: x′ = ( x - xmin ) / (xmax - min)
+
+Onde:
+
+x = valor original
+xmin = menor valor da coluna
+xmax = maior valor da coluna
+x′= valor normalizado
+
+Exemplo: para a coluna IDADE
+25  (esses são os dados, no caso, 4 pessoas)
+35
+45
+60
+Logo, min = 25 e max = 60
+Para normalizar a idade de 45 tem-se:
+	x`= (45-25)/(60-25)   --->  x` = 0,57
+Isso é feito para cada linha da coluna (e em todas elas).
+
+Após a normalização todos os atributos passam a ficar entre 0 e 1.
+*/
+
 function normalizar(dados){
   var cols = dados[0].length;
   var mins = [];
@@ -180,7 +317,23 @@ function normalizar(dados){
   return norm;
 }
 
-// ================= DISTÂNCIA =================
+// ================= Cálculo da DISTÂNCIA Euclidiana =================
+
+/*
+	O KNN utiliza distância euclidiana, por isso, é importante fazer a normalização.
+
+A distância não é calculada apenas com os dados do usuário. O algoritmo compara o perfil do usuário com cada perfil existente na base de referência. Para cada comparação é calculada uma Distância Euclidiana. Quanto menor essa distância, maior a semelhança entre os perfis. Os perfis mais próximos são então utilizados pelo algoritmo KNN para determinar a classificação final do usuário.
+
+	Outra forma, para dizer a mesma coisa,
+
+Para cada novo usuário, o algoritmo calcula a distância entre o perfil informado e todos os perfis existentes na base de referência. Assim, uma base com 100 perfis exige a realização de 100 cálculos de distância. Após essas comparações, os perfis mais semelhantes são selecionados e utilizados para determinar a classificação final por meio de votação majoritária.
+
+
+	Antes da classificação, o que é feito?
+Os dados são submetidos à normalização Min-Max. Essa técnica transforma todas as variáveis para uma escala entre 0 e 1, evitando que atributos com valores numéricos maiores exerçam influência desproporcional sobre o cálculo das distâncias utilizado pelo algoritmo KNN. Dessa forma, idade, IMC, pressão arterial, atividade física, alimentação, tabagismo e histórico familiar contribuem de forma equilibrada para a classificação do risco.
+
+*/
+
 function distancia(a, b){
   var soma = 0;
   for(var i=0;i<a.length;i++){
@@ -189,7 +342,70 @@ function distancia(a, b){
   return Math.sqrt(soma);
 }
 
-// ================= KNN =================
+/*
+
+Exemplo de como é feito:
+
+	Pessoa A
+Idade:      (45-25)/(60-25) = 0,571
+IMC:        (27-20)/(30-20) = 0,700
+Pressão:    (130-110)/(150-110) = 0,500
+Atividade:  (2-1)/(5-1) = 0,250
+Alimentação:(3-2)/(5-2) = 0,333
+Fumante:    (0-0)/(1-0) = 0,000
+Histórico:  (1-0)/(1-0) = 1,000
+
+  Perfil normalizado:
+  A = [0,571; 0,700; 0,500; 0,250; 0,333; 0,000; 1,000]
+
+	Pessoa B
+Idade:      (50-25)/(60-25) = 0,714
+IMC:        (28-20)/(30-20) = 0,800
+Pressão:    (140-110)/(150-110) = 0,750
+Atividade:  (2-1)/(5-1) = 0,250
+Alimentação:(3-2)/(5-2) = 0,333
+Fumante:    (1-0)/(1-0) = 1,000
+Histórico:  (1-0)/(1-0) = 1,000
+
+  Perfil normalizado:
+  B = [0,714; 0,800; 0,750; 0,250; 0,333; 1,000; 1,000]
+
+--> Cálculo da Distância:
+	
+	d = (0.571−0.714)^2 +(0.700−0.800)^2 +(0.500−0.750)^2 +(0.250−0.250)^2 +(0.333−0.333)^2 +(0.000−1.000)^2 +(1.000−1.000)^2]^1/2
+	d = 1,048
+	​
+Quanto menor a distância mais semelhantes são os perfis.
+
+Após a normalização Min-Max, cada indivíduo passa a ser representado por um vetor com valores entre 0 e 1. A similaridade entre os perfis é calculada utilizando a Distância Euclidiana. O algoritmo KNN utiliza essa medida para identificar os indivíduos mais semelhantes e determinar a classificação de risco do usuário.
+
+	IMPORTANTE!!!!
+
+	A distância mede apenas semelhança entre perfis, não o nível de risco.
+
+A distância euclidiana não determina diretamente se o risco é baixo, médio ou alto. Ela é utilizada apenas para medir a semelhança entre o perfil do usuário e os perfis existentes na base de referência. Quanto menor a distância, mais semelhantes são os perfis comparados. A classificação final depende das categorias atribuídas aos vizinhos mais próximos encontrados pelo algoritmo. Dessa forma, dois usuários podem apresentar distâncias igualmente pequenas, mas receber classificações diferentes caso seus perfis mais semelhantes pertençam a grupos de risco distintos.
+
+Ou ainda,
+
+O valor da distância não representa uma medida de risco. Ele representa apenas o grau de semelhança entre os perfis analisados. A classificação de risco é determinada pela votação das classes dos K vizinhos mais próximos, previamente classificados na base de referência.
+*/
+
+// ================= Algoritmo de Machine Learning - KNN =================
+
+/*
+O sistema procura, dentro de sua base de dados, as três pessoas mais parecidas com o usuário (K = 3). Essa comparação é realizada por meio da distância euclidiana, calculada a partir dos dados normalizados, permitindo medir o grau de semelhança entre os perfis.
+
+Em seguida, o algoritmo seleciona os três perfis mais próximos (NN – Nearest Neighbors, ou "vizinhos mais próximos") e verifica a classificação atribuída a cada um deles (baixo, médio ou alto risco).
+
+A classificação final do usuário é determinada por votação majoritária. Por exemplo, se dois dos três vizinhos mais próximos forem classificados como médio risco, o usuário também será classificado como médio risco.
+
+De forma simples, o algoritmo responde à seguinte pergunta:
+
+"Entre as pessoas mais parecidas com você, qual foi o resultado mais comum?"
+
+*/
+
+
 function classificar(){
 
   var idade = Number(document.getElementById("idade").value);
@@ -213,20 +429,29 @@ function classificar(){
   fumo = Number(fumo);
   hist = Number(hist);
 
+// Cálculo do IMC
   var imc = peso / (altura * altura);
 
+// Vetor reorganizado com os dados do indivíduo
   var novo = [idade, imc, pressao, Number(atividade), Number(alimentacao), fumo, hist];
 
+// Cria uma cópia da base de referência e adiciona o novo indivíduo
   var dados = X.slice();
   dados.push(novo);
 
+// Normaliza todos os dados para a escala entre 0 e 1
   var norm = normalizar(dados);
 
+// Recupera o indivíduo recém-inserido já normalizado
   var novo_n = norm[norm.length - 1];
+
+// Remove o indivíduo da base normalizada, mantendo apenas os perfis de referência
   norm.pop();
 
+// Vetor que armazenará as distâncias calculadas
   var dist = [];
 
+// Calcula a distância entre o novo indivíduo e cada perfil da base de referência
   for(var i=0;i<norm.length;i++){
     dist.push({
       d: distancia(novo_n, norm[i]),
@@ -234,13 +459,26 @@ function classificar(){
     });
   }
 
+
+// Ordena as distâncias da menor para a maior
   dist.sort(function(a,b){ return a.d - b.d; });
 
+// Vetor de votação das classes [Baixo, Médio, Alto]
   var votos = [0,0,0];
+
+/*
+Considera os 3 vizinhos mais próximos (K = 3) e contabiliza os votos de cada classe
+Esse procedimento caracteriza o algoritmo K-Nearest Neighbors (KNN), uma técnica de aprendizado supervisionado baseada em similaridade entre instâncias.
+Deve-se evitar K par.
+*/
 
   for(var i=0;i<3;i++){
     votos[dist[i].c]++;
   }
+
+/*
+Então, a contagem significa que o código pega os três valores de d, dos dados de referência, em que o d calculado para o usuário ficou mais próximo. Depois, verifica se esses valores de referência são de baixo, médio ou alto risco.
+*/
 
   var classe = 0;
   if(votos[1] > votos[classe]) classe = 1;
@@ -256,7 +494,7 @@ function classificar(){
 
   document.getElementById("explicacao").innerHTML =
   "Esta análise utiliza Inteligência Artificial (Machine Learning), com base em perfis semelhantes.<br>" +
-  "Para uma avaliação completa, procure um profissional de saúde.";
+  "Para uma avaliação completa, procure um profissional de saúde!";
 }
 
 // ================= EVENTO (CRÍTICO) =================
