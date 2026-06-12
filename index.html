@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">	
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Triagem de Saúde</title>
 
 <style>
@@ -15,8 +15,9 @@ body {
 .container {
   background: white;
   padding: 20px;
-  margin: 30px;
+  margin: 10px auto;
   border-radius: 10px;
+  max-width: 600px;
 }
 
 .label {
@@ -63,6 +64,28 @@ button {
 #explicacao {
   font-size: 14px;
 }
+
+.rodape-linha{
+  margin-top:25px;
+  border:none;
+  border-top:1px solid #ddd;
+}
+
+.rodape{
+  text-align:center;
+  margin-top:15px;
+}
+
+.logo-rodape{
+  width:150px;
+  max-width:70%;
+}
+
+.texto-rodape{
+  font-size:12px;
+  color:#777;
+  margin-top:8px;
+}
 </style>
 </head>
 
@@ -78,7 +101,7 @@ button {
    <input id="altura" placeholder="Altura (m)" type="number">
 
    <small class="ajuda">
-    💡 Exemplo: Exemplo: 1,75
+    💡 Exemplo: 1,75
    </small>
   </div>
 
@@ -132,6 +155,22 @@ button {
 
 <div id="resultado"></div>
 <div id="explicacao"></div>
+
+<!-- Código para adicionar o logo do AppSAU no rodapé -->
+
+<hr class="rodape-linha">
+
+<div class="rodape">
+
+  <img src="logo-appsau.png"
+       alt="AppSAU"
+       class="logo-rodape">
+
+  <p class="texto-rodape">
+    AppSAU • Sistema de Triagem em Saúde baseado em Machine Learning (IA)
+  </p>
+
+</div>
 
 </div>
 
@@ -205,7 +244,7 @@ Como cada resposta é "transformada" em número:
 - Histórico: 0 ou 1 (Não é 0 e Sim é 1)
 */
 
-var X = [	
+var X = [
   [45, 27, 130, 2, 3, 0, 1], // Perfil 0
   [30, 22, 120, 4, 4, 0, 0], // Perfil 1
   [60, 30, 150, 1, 2, 1, 1], // Perfil 2
@@ -496,7 +535,7 @@ Então, a contagem significa que o código pega os três valores de d, dos dados
 
   document.getElementById("explicacao").innerHTML =
   "Esta análise utiliza Inteligência Artificial (Machine Learning), com base em perfis semelhantes.<br>" +
-  "Para uma avaliação completa, procure um profissional de saúde..";
+  "Para uma avaliação completa, procure um profissional de saúde.";
 }
 
 // ================= EVENTO (CRÍTICO) =================
