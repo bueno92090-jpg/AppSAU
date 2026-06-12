@@ -86,6 +86,20 @@ button {
   color:#777;
   margin-top:8px;
 }
+
+#painelIA{
+  margin-top:15px;
+  padding:10px;
+  background:#f8f9fa;
+  border:1px solid #ddd;
+  border-radius:8px;
+}
+
+#detalhesIA{
+  font-size:13px;
+  line-height:1.5;
+}
+
 </style>
 </head>
 
@@ -109,7 +123,7 @@ button {
    <input id="pressao" placeholder="Pressão arterial máxima (Sistólica)" type="number">
 
    <small class="ajuda">
-    💡 Exemplo: Exemplo: use 120 em uma pressão 120/80 (ou 12/8).
+    💡 Exemplo: use 120 em uma pressão 120/80 (ou 12/8).
    </small>
   </div>
 
@@ -155,6 +169,18 @@ button {
 
 <div id="resultado"></div>
 <div id="explicacao"></div>
+
+<!-- Para mostrar os resultados "por trás da análise" -->
+
+<details id="painelIA" style="margin-top:15px; text-align:left;">
+  <summary style="cursor:pointer; font-weight:bold;">
+    🔍 Detalhes da classificação (IA)
+  </summary>
+
+  <div id="detalhesIA" style="margin-top:10px;"></div>
+
+</details>
+
 
 <!-- Código para adicionar o logo do AppSAU no rodapé -->
 
@@ -391,7 +417,7 @@ Exemplo de como é feito:
 Idade:      (45-25)/(60-25) = 0,571
 IMC:        (27-20)/(30-20) = 0,700
 Pressão:    (130-110)/(150-110) = 0,500
-Atividade:  (2-1)/(5-1) = 0,250
+Atividade:  (2-1)/(4-1) = 0,333
 Alimentação:(3-2)/(5-2) = 0,333
 Fumante:    (0-0)/(1-0) = 0,000
 Histórico:  (1-0)/(1-0) = 1,000
@@ -403,7 +429,7 @@ Histórico:  (1-0)/(1-0) = 1,000
 Idade:      (50-25)/(60-25) = 0,714
 IMC:        (28-20)/(30-20) = 0,800
 Pressão:    (140-110)/(150-110) = 0,750
-Atividade:  (2-1)/(5-1) = 0,250
+Atividade:  (2-1)/(4-1) = 0,333
 Alimentação:(3-2)/(5-2) = 0,333
 Fumante:    (1-0)/(1-0) = 1,000
 Histórico:  (1-0)/(1-0) = 1,000
@@ -414,7 +440,7 @@ Histórico:  (1-0)/(1-0) = 1,000
 --> Cálculo da Distância:
 	
 	d = (0.571−0.714)^2 +(0.700−0.800)^2 +(0.500−0.750)^2 +(0.250−0.250)^2 +(0.333−0.333)^2 +(0.000−1.000)^2 +(1.000−1.000)^2]^1/2
-	d = 1,048
+	d = 1,042
 	​
 Quanto menor a distância mais semelhantes são os perfis.
 
@@ -469,6 +495,7 @@ function classificar(){
 
   fumo = Number(fumo);
   hist = Number(hist);
+  
 
 // Cálculo do IMC
   var imc = peso / (altura * altura);
@@ -494,15 +521,86 @@ function classificar(){
 
 // Calcula a distância entre o novo indivíduo e cada perfil da base de referência
   for(var i=0;i<norm.length;i++){
-    dist.push({
-      d: distancia(novo_n, norm[i]),
-      c: Y[i]
-    });
+    dist.push({				// Para saber qual perfil da base foi utilizado
+  id: i,
+   d: distancia(novo_n, norm[i]),
+   c: Y[i]
+  });
   }
 
 
 // Ordena as distâncias da menor para a maior
   dist.sort(function(a,b){ return a.d - b.d; });
+
+/* .... EXPLICABILIDADE DA IA ....
+
+ Após calcular todas as distâncias, o algoritmo ordena os
+ perfis da base do mais parecido para o menos parecido.
+
+ Nesta etapa serão exibidos os K vizinhos mais próximos,
+ suas respectivas distâncias e suas classificações.
+
+ IMPORTANTE:
+ A distância NÃO representa o risco.
+ Ela representa apenas a semelhança entre os perfis.
+
+ O risco final será determinado pela votação majoritária
+ entre os K vizinhos mais próximos.
+*/
+var detalhesIA =
+  "<b>🔍 Explainable AI (XAI) – Inteligência Artificial Explicável</b><br><br>" +
+
+  "A Inteligência Artificial desenvolvida no AppSAU incorpora princípios de Explainable AI (XAI), permitindo visualizar os perfis mais semelhantes encontrados, as distâncias calculadas e o processo de votação utilizado pelo algoritmo KNN para gerar a classificação final.<br><br>" +
+
+  "<b>Perfis mais semelhantes encontrados:</b><br><br>";
+
+var classeTxt = [
+  "Baixo risco",
+  "Médio risco",
+  "Alto risco"
+];
+
+ // substituir. Os números por textos, para mostrar nos resultados
+ var atividadeTxt = [
+  "",
+  "0 dias",
+  "1-2 dias",
+  "3-4 dias",
+  "5+ dias"
+];
+
+var alimentacaoTxt = [
+  "",
+  "Muito ruim",
+  "Ruim",
+  "Regular",
+  "Boa",
+  "Muito boa"
+];
+ 
+ /* Aqui que entra o famoso "K" do KNN. Neste código, K = 3 (veja onde está o i<3).
+	 K = 3
+	 O algoritmo seleciona os 3 vizinhos mais próximos (Nearest Neighbors) para participar da votação.
+ */
+for(var i=0;i<3;i++){
+
+  var perfil = X[dist[i].id];
+
+detalhesIA +=
+  "<b>" + (i+1) + "º vizinho mais próximo</b><br>" +
+  "Perfil de referência: " + dist[i].id + "<br>" +
+  "Idade: " + perfil[0] + " anos<br>" +
+  "IMC: " + perfil[1] + "<br>" +
+  "Pressão: " + perfil[2] + " mmHg<br>" +
+  "Atividade Física: " + atividadeTxt[perfil[3]] + "<br>" +
+  "Alimentação: " + alimentacaoTxt[perfil[4]] + "<br>" +
+  "Fumante: " + (perfil[5] ? "Sim" : "Não") + "<br>" +
+  "Histórico Familiar: " + (perfil[6] ? "Sim" : "Não") + "<br>" +
+  "Distância: " + dist[i].d.toFixed(3) + "<br>" +
+  "Classificação: " + classeTxt[dist[i].c] +
+  "<br><br>";
+}
+// ....fechamento de "EXPLICABILIDADE DA IA"....
 
 // Vetor de votação das classes [Baixo, Médio, Alto]
   var votos = [0,0,0];
@@ -521,6 +619,19 @@ Deve-se evitar K par.
 Então, a contagem significa que o código pega os três valores de d, dos dados de referência, em que o d calculado para o usuário ficou mais próximo. Depois, verifica se esses valores de referência são de baixo, médio ou alto risco.
 */
 
+detalhesIA +=
+  "<b>Resultado da votação:</b><br>" +
+  "Baixo risco: " + votos[0] + " voto(s)<br>" +
+  "Médio risco: " + votos[1] + " voto(s)<br>" +
+  "Alto risco: " + votos[2] + " voto(s)<br><br>";
+
+detalhesIA +=
+  "<b>Como a IA tomou a decisão?</b><br>" +
+  "O sistema procurou os 3 perfis mais semelhantes ao usuário, " +
+  "utilizando a distância euclidiana aplicada aos dados normalizados. " +
+  "Em seguida, verificou a classificação desses perfis e realizou uma votação majoritária. " +
+  "A classe mais frequente foi utilizada como classificação final.";
+
   var classe = 0;
   if(votos[1] > votos[classe]) classe = 1;
   if(votos[2] > votos[classe]) classe = 2;
@@ -536,6 +647,9 @@ Então, a contagem significa que o código pega os três valores de d, dos dados
   document.getElementById("explicacao").innerHTML =
   "Esta análise utiliza Inteligência Artificial (Machine Learning), com base em perfis semelhantes.<br>" +
   "Para uma avaliação completa, procure um profissional de saúde.";
+
+    // Para mostrar os resultados da análise:
+  document.getElementById("detalhesIA").innerHTML = detalhesIA;
 }
 
 // ================= EVENTO (CRÍTICO) =================
